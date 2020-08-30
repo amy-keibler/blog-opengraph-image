@@ -6,6 +6,7 @@ use rand::prelude::*;
 use rusttype::{Font, Scale};
 use serde::Deserialize;
 
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -23,6 +24,7 @@ static TEXT_PADDING: u32 = 30;
 #[derive(PartialEq, Debug, Deserialize)]
 struct Article {
     title: String,
+    slug: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -34,8 +36,21 @@ fn main() -> Result<()> {
     let article_path = Path::new(&article_file);
     if article_path.is_file() {
         let article = parse_article(article_path)?;
-        let article_image_path = article_path.with_extension("png");
+        let parent = article_path.parent().unwrap_or_else(|| Path::new("."));
+        let article_slug = article
+            .slug
+            .clone()
+            .or_else(|| {
+                article_path
+                    .file_stem()
+                    .map(OsStr::to_string_lossy)
+                    .map(String::from)
+            })
+            .map(slug::slugify)
+            .ok_or_else(|| eyre!("Could not get the article slug from the article or the path"))?;
+        let article_image_path = parent.join(article_slug).with_extension("png");
         generate_image(&article_image_path, article)?;
+        println!("Output {}", article_image_path.to_string_lossy());
     } else {
         Err(eyre!("{} passed in, but it does not exists", article_file))?;
     }

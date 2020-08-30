@@ -82,6 +82,7 @@ dependencies = [
  "rand",
  "rusttype",
  "serde",
+ "slug",
  "toml",
 ]
 
@@ -216,6 +217,12 @@ dependencies = [
  "adler32",
  "byteorder",
 ]
+
+[[package]]
+name = "deunicode"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "850878694b7933ca4c9569d30a34b55031b9b139ee1fc7b94a527c4ef960d690"
 
 [[package]]
 name = "either"
@@ -689,6 +696,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06d5a3f5166fb5b42a5439f2eee8b9de149e235961e3eb21c5808fc3ea17ff3e"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "slug"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3bc762e6a4b6c6fcaade73e77f9ebc6991b676f88bb2358bddb56560f073373"
+dependencies = [
+ "deunicode",
 ]
 
 [[package]]
