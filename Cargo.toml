@@ -16,4 +16,5 @@ toml = "0.5.6"
 serde = { version = "1.0.115", features = ["derive"] }
 rand = "0.7.3"
 slug = "0.1.4"
+conv = "0.3.3"
 

@@ -76,6 +76,7 @@ name = "blog-image"
 version = "0.1.0"
 dependencies = [
  "color-eyre",
+ "conv",
  "eyre",
  "image",
  "imageproc",

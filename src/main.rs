@@ -1,31 +1,28 @@
 use color_eyre::eyre::Result;
 use eyre::eyre;
-use image::GenericImage;
-use imageproc::drawing::{draw_filled_circle_mut, draw_hollow_circle_mut, draw_text_mut};
-use rand::prelude::*;
-use rusttype::{Font, Scale};
-use serde::Deserialize;
+use image::Rgb;
+use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut};
+use imageproc::rect::Rect;
+use rusttype::Font;
 
-use std::ffi::OsStr;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+mod article;
+mod background;
+mod layout;
+
+use article::ArticleInformation;
+use background::{add_circles, fill_background};
+use layout::Layout;
 
 static IMAGE_WIDTH: u32 = 1200;
-static IMAGE_HEIGHT: u32 = 630;
-static BORDER_SIZE: u32 = 10;
+static IMAGE_HEIGHT: u32 = 1200;
+static TEXT_BOX_PADDING: u32 = 100;
+static VERTICAL_PADDING: u32 = 285;
+static TEXT_PADDING: u32 = 30;
+
 static BACKGROUND_COLOR: [u8; 3] = [248, 240, 255];
 static PRIMARY_COLOR: [u8; 3] = [112, 33, 186];
 static PRIMARY_DESATURATED_COLOR: [u8; 3] = [130, 61, 194];
 static SECONDARY_COLOR: [u8; 3] = [235, 214, 255];
-static TEXT_SIZE: f32 = 60.0;
-static TEXT_PADDING: u32 = 30;
-
-#[derive(PartialEq, Debug, Deserialize)]
-struct Article {
-    title: String,
-    slug: Option<String>,
-}
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -33,124 +30,50 @@ fn main() -> Result<()> {
         .skip(1)
         .next()
         .ok_or(eyre!("Expected a filepath to a blog article"))?;
-    let article_path = Path::new(&article_file);
-    if article_path.is_file() {
-        let article = parse_article(article_path)?;
-        let parent = article_path.parent().unwrap_or_else(|| Path::new("."));
-        let article_slug = article
-            .slug
-            .clone()
-            .or_else(|| {
-                article_path
-                    .file_stem()
-                    .map(OsStr::to_string_lossy)
-                    .map(String::from)
-            })
-            .map(slug::slugify)
-            .ok_or_else(|| eyre!("Could not get the article slug from the article or the path"))?;
-        let article_image_path = parent.join(article_slug).with_extension("png");
-        generate_image(&article_image_path, article)?;
-        println!("Output {}", article_image_path.to_string_lossy());
-    } else {
-        Err(eyre!("{} passed in, but it does not exists", article_file))?;
-    }
+    let article_information = ArticleInformation::retrieve(&article_file)?;
+    generate_image(&article_information)?;
+    println!(
+        "Output {}",
+        article_information.image_path.to_string_lossy()
+    );
 
     Ok(())
 }
 
-fn parse_article(article_path: &Path) -> Result<Article> {
-    let article_file = BufReader::new(File::open(article_path)?);
-    let article_contents: String = article_file
-        .lines()
-        .filter_map(|line_result| line_result.ok())
-        .skip_while(|line| !line.starts_with("+++"))
-        .skip_while(|line| line.starts_with("+++"))
-        .take_while(|line| !line.starts_with("+++"))
-        .collect::<Vec<String>>()
-        .join("\n");
-    let article = toml::from_str(&article_contents)?;
-    Ok(article)
-}
-
-fn generate_image(article_image_path: &PathBuf, article: Article) -> Result<()> {
+fn generate_image(article_information: &ArticleInformation) -> Result<()> {
     let mut image = image::ImageBuffer::new(IMAGE_WIDTH, IMAGE_HEIGHT);
 
-    for (x, y, pixel) in image.enumerate_pixels_mut() {
-        *pixel = image::Rgb(BACKGROUND_COLOR);
-    }
-
+    fill_background(&mut image);
     add_circles(&mut image);
-
-    for (x, y, pixel) in image.enumerate_pixels_mut() {
-        if x <= BORDER_SIZE
-            || x >= (IMAGE_WIDTH - BORDER_SIZE)
-            || y <= BORDER_SIZE
-            || y >= (IMAGE_HEIGHT - BORDER_SIZE)
-        {
-            *pixel = image::Rgb(PRIMARY_COLOR);
-        } else if y <= BORDER_SIZE + TEXT_SIZE as u32 + TEXT_PADDING {
-            *pixel = image::Rgb(SECONDARY_COLOR);
-        }
-    }
 
     let font_data: &[u8] = include_bytes!("/usr/share/fonts/TTF/DejaVuSans.ttf");
     let font: Font<'static> =
         Font::try_from_bytes(font_data).ok_or(eyre!("Could not load font"))?;
 
-    let scale = Scale {
-        x: TEXT_SIZE,
-        y: TEXT_SIZE,
-    };
-    draw_text_mut(
-        &mut image,
-        image::Rgb(PRIMARY_COLOR),
-        TEXT_PADDING,
-        TEXT_PADDING,
-        scale,
-        &font,
-        &article.title,
-    );
+    let max_width = IMAGE_WIDTH - (2 * TEXT_BOX_PADDING);
+    let max_height = IMAGE_HEIGHT - (2 * VERTICAL_PADDING + 2 * TEXT_BOX_PADDING);
 
-    image.save(article_image_path)?;
+    let layout = Layout::new(
+        &font,
+        &article_information.title,
+        max_width - (2 * TEXT_PADDING),
+        max_height - (2 * TEXT_PADDING),
+    )?;
+
+    let width = layout.calculated_width();
+    let height = layout.calculated_height();
+
+    let x = IMAGE_WIDTH / 2 - width / 2;
+    let y = IMAGE_HEIGHT / 2 - height / 2;
+
+    let rect = Rect::at((x - TEXT_PADDING) as i32, (y - TEXT_PADDING) as i32)
+        .of_size(width + (2 * TEXT_PADDING), height + (2 * TEXT_PADDING));
+    draw_filled_rect_mut(&mut image, rect, Rgb(SECONDARY_COLOR));
+    draw_hollow_rect_mut(&mut image, rect, Rgb(PRIMARY_COLOR));
+
+    layout.render(&mut image, image::Rgb(PRIMARY_COLOR), x, y)?;
+
+    image.save(&article_information.image_path)?;
 
     Ok(())
-}
-
-fn add_circles(image: &mut image::ImageBuffer<image::Rgb<u8>, std::vec::Vec<u8>>) {
-    for _ in 0..30 {
-        let x_range: f32 = rand::random();
-        let y_range: f32 = rand::random();
-        let radius_range: f32 = rand::random();
-        let position = (
-            (IMAGE_WIDTH as f32 * x_range) as i32,
-            (IMAGE_HEIGHT as f32 * y_range) as i32,
-        );
-        let radius = (60.0 * radius_range) as i32 + 20;
-        draw_filled_circle_mut(image, position, radius, image::Rgb(SECONDARY_COLOR));
-
-        draw_hollow_circle_mut(
-            image,
-            position,
-            radius,
-            image::Rgb(PRIMARY_DESATURATED_COLOR),
-        );
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_should_process_zola_frontmatter() {
-        let article_path = Path::new("tests/blog.md");
-        assert_eq!(true, article_path.is_file());
-        let article = parse_article(article_path).expect("Could not read article");
-        assert_eq!(
-            Article {
-                title: "Principles of Technology Leadership".to_owned()
-            },
-            article
-        );
-    }
 }
