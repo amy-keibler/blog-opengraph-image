@@ -9,6 +9,21 @@ use std::iter::FromIterator;
 
 const MAX_FONT_SIZE: u32 = 120;
 const MIN_FONT_SIZE: u32 = 20;
+const MIN_DISTANCE_TO_CENTER_TEXT: u32 = 70;
+
+enum HorizontalLayoutCalculator {
+    LeftAligned,
+    CenterAligned(Box<dyn Fn(u32) -> u32>),
+}
+
+impl HorizontalLayoutCalculator {
+    fn left_padding(&self, line_width: u32) -> u32 {
+        match self {
+            HorizontalLayoutCalculator::LeftAligned => 0,
+            HorizontalLayoutCalculator::CenterAligned(f) => f(line_width),
+        }
+    }
+}
 
 pub struct Layout<'a> {
     lines: Vec<Line<'a>>,
@@ -105,6 +120,22 @@ impl<'a> Layout<'a> {
             .unwrap_or_default()
     }
 
+    fn calculate_padding(&self) -> HorizontalLayoutCalculator {
+        let max_width = self.calculated_width();
+        if self
+            .lines
+            .iter()
+            .map(Line::calculated_width)
+            .any(|x| max_width - x > MIN_DISTANCE_TO_CENTER_TEXT)
+        {
+            HorizontalLayoutCalculator::CenterAligned(Box::new(move |x| {
+                (max_width.clone() - x) / 2
+            }))
+        } else {
+            HorizontalLayoutCalculator::LeftAligned
+        }
+    }
+
     pub fn calculated_height(&self) -> u32 {
         self.lines.len() as u32 * self.line_height
     }
@@ -116,8 +147,9 @@ impl<'a> Layout<'a> {
         x: u32,
         y: u32,
     ) -> Result<()> {
+        let padding_calculator = self.calculate_padding();
         for line in &self.lines {
-            line.render(canvas, color, x, y)?;
+            line.render(canvas, color, x, y, &padding_calculator)?;
         }
         Ok(())
     }
@@ -134,7 +166,10 @@ impl<'a> Line<'a> {
         color: image::Rgba<u8>,
         x: u32,
         y: u32,
+        padding_calculator: &HorizontalLayoutCalculator,
     ) -> Result<()> {
+        let width = self.calculated_width();
+        let centering_padding: i32 = padding_calculator.left_padding(width) as i32;
         // code adapted from https://github.com/image-rs/imageproc/blob/7569542ba9bf7a5523850bd7cf34c79df29ba285/src/drawing/text.rs#L12 (used under MIT license)
         for g in &self.glyphs {
             if let Some(bb) = g.pixel_bounding_box() {
@@ -142,7 +177,7 @@ impl<'a> Line<'a> {
                     let gx = gx as i32 + bb.min.x;
                     let gy = gy as i32 + bb.min.y;
 
-                    let image_x = gx + x as i32;
+                    let image_x = gx + x as i32 + centering_padding;
                     let image_y = gy + y as i32;
 
                     let image_width = canvas.width() as i32;
