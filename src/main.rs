@@ -1,6 +1,6 @@
 use color_eyre::eyre::Result;
 use eyre::eyre;
-use image::Rgb;
+use image::Rgba;
 use imageproc::drawing::{draw_filled_rect_mut, draw_hollow_rect_mut};
 use imageproc::rect::Rect;
 use rusttype::Font;
@@ -10,19 +10,19 @@ mod background;
 mod layout;
 
 use article::ArticleInformation;
-use background::{add_circles, fill_background};
+use background::render_background;
 use layout::Layout;
 
-static IMAGE_WIDTH: u32 = 1200;
-static IMAGE_HEIGHT: u32 = 1200;
-static TEXT_BOX_PADDING: u32 = 100;
-static VERTICAL_PADDING: u32 = 285;
-static TEXT_PADDING: u32 = 30;
+const IMAGE_WIDTH: u32 = 1200;
+const IMAGE_HEIGHT: u32 = 1200;
+const TEXT_BOX_PADDING: u32 = 100;
+const VERTICAL_PADDING: u32 = 285;
+const TEXT_PADDING: u32 = 30;
 
-static BACKGROUND_COLOR: [u8; 3] = [248, 240, 255];
-static PRIMARY_COLOR: [u8; 3] = [112, 33, 186];
-static PRIMARY_DESATURATED_COLOR: [u8; 3] = [130, 61, 194];
-static SECONDARY_COLOR: [u8; 3] = [235, 214, 255];
+const BACKGROUND_COLOR: [u8; 4] = [248, 240, 255, 255];
+const PRIMARY_COLOR: [u8; 4] = [112, 33, 186, 255];
+const PRIMARY_DESATURATED_COLOR: [u8; 4] = [130, 61, 194, 255];
+const SECONDARY_COLOR: [u8; 4] = [235, 214, 255, 255];
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -43,8 +43,7 @@ fn main() -> Result<()> {
 fn generate_image(article_information: &ArticleInformation) -> Result<()> {
     let mut image = image::ImageBuffer::new(IMAGE_WIDTH, IMAGE_HEIGHT);
 
-    fill_background(&mut image);
-    add_circles(&mut image);
+    render_background(&mut image, &article_information)?;
 
     let font_data: &[u8] = include_bytes!("/usr/share/fonts/TTF/DejaVuSans.ttf");
     let font: Font<'static> =
@@ -68,10 +67,10 @@ fn generate_image(article_information: &ArticleInformation) -> Result<()> {
 
     let rect = Rect::at((x - TEXT_PADDING) as i32, (y - TEXT_PADDING) as i32)
         .of_size(width + (2 * TEXT_PADDING), height + (2 * TEXT_PADDING));
-    draw_filled_rect_mut(&mut image, rect, Rgb(SECONDARY_COLOR));
-    draw_hollow_rect_mut(&mut image, rect, Rgb(PRIMARY_COLOR));
+    draw_filled_rect_mut(&mut image, rect, Rgba(SECONDARY_COLOR));
+    draw_hollow_rect_mut(&mut image, rect, Rgba(PRIMARY_COLOR));
 
-    layout.render(&mut image, image::Rgb(PRIMARY_COLOR), x, y)?;
+    layout.render(&mut image, image::Rgba(PRIMARY_COLOR), x, y)?;
 
     image.save(&article_information.image_path)?;
 
