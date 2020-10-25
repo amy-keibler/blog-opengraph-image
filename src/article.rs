@@ -10,12 +10,19 @@ use std::path::{Path, PathBuf};
 pub struct ArticleInformation {
     pub image_path: PathBuf,
     pub title: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct Article {
     title: String,
     slug: Option<String>,
+    taxonomies: Option<Taxonomies>,
+}
+
+#[derive(PartialEq, Debug, Deserialize)]
+struct Taxonomies {
+    tags: Vec<String>,
 }
 
 impl ArticleInformation {
@@ -42,6 +49,7 @@ impl ArticleInformation {
             Ok(Self {
                 title: article.title,
                 image_path: article_image_path,
+                tags: article.taxonomies.map(|t| t.tags).unwrap_or_default(),
             })
         } else {
             Err(eyre!("{} passed in, but it does not exists", article_file))
@@ -75,7 +83,10 @@ mod tests {
         assert_eq!(
             Article {
                 title: "Principles of Technology Leadership".to_owned(),
-                slug: None
+                slug: None,
+                taxonomies: Some(Taxonomies {
+                    tags: vec![String::from("leadership"), String::from("ethics"),]
+                })
             },
             article
         );

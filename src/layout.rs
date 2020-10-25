@@ -111,8 +111,8 @@ impl<'a> Layout<'a> {
 
     pub fn render<'b>(
         &self,
-        canvas: &'b mut image::RgbImage,
-        color: image::Rgb<u8>,
+        canvas: &'b mut image::RgbaImage,
+        color: image::Rgba<u8>,
         x: u32,
         y: u32,
     ) -> Result<()> {
@@ -130,8 +130,8 @@ struct Line<'a> {
 impl<'a> Line<'a> {
     fn render<'b>(
         &self,
-        canvas: &'b mut image::RgbImage,
-        color: image::Rgb<u8>,
+        canvas: &'b mut image::RgbaImage,
+        color: image::Rgba<u8>,
         x: u32,
         y: u32,
     ) -> Result<()> {
