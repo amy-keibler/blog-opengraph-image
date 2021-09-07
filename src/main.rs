@@ -45,7 +45,7 @@ fn generate_image(article_information: &ArticleInformation) -> Result<()> {
 
     render_background(&mut image, &article_information)?;
 
-    let font_data: &[u8] = include_bytes!("/usr/share/fonts/TTF/DejaVuSans.ttf");
+    let font_data: &[u8] = include_bytes!("../font/DejaVuSans.ttf");
     let font: Font<'static> =
         Font::try_from_bytes(font_data).ok_or(eyre!("Could not load font"))?;
 
