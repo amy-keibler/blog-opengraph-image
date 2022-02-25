@@ -13,6 +13,7 @@
       packages.blog-opengraph-image = naersk-lib.buildPackage {
         pname = "blog-opengraph-image";
         root = ./.;
+        doCheck = true;
       };
       defaultPackage = packages.blog-opengraph-image;
 
