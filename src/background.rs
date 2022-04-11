@@ -49,8 +49,8 @@ fn add_ferris(image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) -> Result<()> {
                     overlay(
                         image,
                         &ferris,
-                        x * FERRIS_SQUARE_SIZE + FERRIS_PADDING_SIZE + draw_x_offset,
-                        y * FERRIS_SQUARE_SIZE + FERRIS_PADDING_SIZE,
+                        (x * FERRIS_SQUARE_SIZE + FERRIS_PADDING_SIZE + draw_x_offset).into(),
+                        (y * FERRIS_SQUARE_SIZE + FERRIS_PADDING_SIZE).into(),
                     );
                 }
             }
