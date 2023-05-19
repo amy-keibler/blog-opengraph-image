@@ -12,7 +12,7 @@ imageproc = "0.23.0"
 eyre = "0.6.8"
 color-eyre = "0.6.2"
 rusttype = "0.9.3"
-toml = "0.7.3"
+toml = "0.7.4"
 serde = { version = "1.0.163", features = ["derive"] }
 rand = "0.8.5"
 slug = "0.1.4"
