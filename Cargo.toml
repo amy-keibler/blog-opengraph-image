@@ -10,7 +10,7 @@ edition = "2018"
 image = "0.24.8"
 imageproc = "0.23.0"
 eyre = "0.6.11"
-color-eyre = "0.6.2"
+color-eyre = "0.6.3"
 rusttype = "0.9.3"
 toml = "0.8.12"
 serde = { version = "1.0.164", features = ["derive"] }
