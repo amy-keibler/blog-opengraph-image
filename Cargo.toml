@@ -13,7 +13,7 @@ eyre = "0.6.12"
 color-eyre = "0.6.3"
 rusttype = "0.9.3"
 toml = "0.8.12"
-serde = { version = "1.0.164", features = ["derive"] }
+serde = { version = "1.0.198", features = ["derive"] }
 rand = "0.8.5"
 slug = "0.1.5"
 conv = "0.3.3"
